@@ -23,73 +23,67 @@ class FBoard:
         return self._game_sate
     
 
-    def is_move_in_range(self,r,c):
+    def is_move_in_range(self, row, col):
         """
         Return False if move not on board
         """
-        if r not in range(0,8) or c not in range(0,8):
-            return False
-        return True
+        return row in range(8) and col in range(8)
        
         
-    def if_move_legal(self, to_row, to_col):
+    def is_move_legal(self, to_row, to_col):
         """
         Return False if move not allowed or 
         True if valid.
-        """     
-        # If Game is over.
+        """
         if self.get_game_state() != "UNFINISHED":
             return False
-        
-        # If move is out-of-range.
-        if self.is_move_in_range(to_row, to_col) == False:
+
+        if not self.is_move_in_range(to_row, to_col):
             return False
 
-        # If destination is not empty
-        if self._board[to_row][to_col] != "*":
-            # Check if game's over 
-            if self.check_if_won() != True:
-                print("Move is invalid. Please try again.")
-                return  # Try another square
-            return False   
+        # If destination is not empty and game is not won
+        if self._board[to_row][to_col] != "*" and not self.check_if_won():
+            print("Move is invalid. Please try again.")
+            return False
+
         return True
 
 
     def valid_x_move(self, to_row, to_col):
         """
-        x only moves diagonally.  Checks move 
-        validity. Returns True if diagonal.
-        """    
-        # Only move 1 square diagonally any direction
-        if (to_row, to_col) == (self._x_row+1, self._x_col-1) or (
-            to_row, to_col) == (self._x_row+1, self._x_col+1) or (
-            to_row, to_col) == (self._x_row-1, self._x_col-1) or (
-            to_row, to_col) == (self._x_row-1, self._x_col+1):
-            return True   
-        return False # move not allowed
+        Check if x can move diagonally by 1 square in any direction.
+        Returns True if the move is valid.
+        """   
+        diagonal_moves = [(self._x_row + 1, self._x_col - 1), 
+                      (self._x_row + 1, self._x_col + 1), 
+                      (self._x_row - 1, self._x_col - 1), 
+                      (self._x_row - 1, self._x_col + 1)]
+       
+        return (to_row, to_col) in diagonal_moves
 
 
     def move_x(self, to_row, to_col):
         """
-        Moves x one square diagonally, 
-        if input(row,col) is legal. 
+        Moves x diagonally by one square if the given coordinates 
+        are legal.
         """
-        if self.if_move_legal(to_row, to_col) == True: 
-            if self.valid_x_move(to_row, to_col) == True:
-                # Move x
-                self._board[self._x_row][self._x_col] = '*'
-                self._board[to_row][to_col] = 'x'
-                # Update x position
-                self._x_row = to_row
-                self._x_col = to_col
-                self.check_if_won() # win if x coord is (7,7)
-                return True
+        if self.is_move_legal(to_row, to_col) and self.valid_x_move(to_row, to_col):
+            # Move x
+            self._board[self._x_row][self._x_col] = '*'
+            self._board[to_row][to_col] = 'x'
+            
+            # Update x position
+            self._x_row, self._x_col = to_row, to_col
+            
+            self.check_if_won()  # win if x coord is (7,7)
+            
+            return True
+         return False
 
 
     def valid_o_move(self,to_row, to_col, fr_row, fr_col):
         """
-        Checks if o move is allowed.  
-        Returns True if valid.
+        Checks if o move is allowed. Returns True if valid.
         """    
         # Starting coordinate can only contain o
         if self._board[fr_row][fr_col] != 'o':
@@ -105,64 +99,50 @@ class FBoard:
 
     def move_o(self, fr_row, fr_col, to_row, to_col):
         """
-        Takes origin and destination coordinates.
-        Moves o if valid. 
+        Moves 'o' from given origin to destination coordinates 
+        if move is legal.
         """
-        if self.if_move_legal(to_row, to_col) == True: 
-            if self.valid_o_move(to_row, to_col, fr_row, fr_col) == True:
-                # Move o
-                self._board[fr_row][fr_col] = '*'
-                self._board[to_row][to_col] = 'o'
+        if self.is_move_legal(to_row, to_col) and \
+                self.valid_o_move(to_row, to_col, fr_row, fr_col):
+            # Move 'o'
+            self._board[fr_row][fr_col] = '*'
+            self._board[to_row][to_col] = 'o'
             return True
+        return False
     
 
-    def check_surrounding_squares(self, r, c): 
+    def check_surrounding_squares(self, r, c):
         """
-        Takes starting row, col. Checks sourrounding
-        diagonal moves. Of these, returns list of 
-        out-of-bounds or occupied coordinates. 
+        Returns a list of out-of-bounds or occupied diagonal 
+        moves from the given starting row and column.
         """
+        offsets = [(1, 1), (-1, -1), (-1, 1), (1, -1)]
         bad_moves = []
-
-        if not self.is_move_in_range(r+1, c+1) or  \
-            self._board[r+1][c+1] != '*':
-            bad_moves.append((r+1,c+1))
-        
-        if not self.is_move_in_range(r-1, c-1) or \
-            self._board[r-1][c-1] != '*':
-            bad_moves.append((r-1,c-1))
-        
-        if not self.is_move_in_range(r-1, c+1) or \
-            self._board[r-1][c+1] != '*':
-            bad_moves.append((r-1,c+1))
-        
-        if not self.is_move_in_range(r+1, c-1) or \
-            self._board[r+1][c-1] != '*':
-            bad_moves.append((r+1,c-1))     
+        for dr, dc in offsets:
+            row, col = r + dr, c + dc
+            if not self.is_move_in_range(row, col) or self._board[row][col] != '*':
+                bad_moves.append((row, col))
         return bad_moves
 
 
     def check_if_won(self):
         """
-        Check move for the win.
+        Checks if the game has been won.
         """
-        r = self._x_row  # Starting row
-        c = self._x_col  # Staring col 
-        bad_moves = self.check_surrounding_squares(r,c)
-
+        bad_moves = self.check_surrounding_squares(self._x_row, self._x_col)
         if self._board[7][7] == "x":
-            self._game_sate = "X_WON"   
+            self._game_sate = "X_WON"
             return True
         elif len(bad_moves) == 4:
             self._game_sate = "O_WON"
             return True
         else:
-            bad_moves.clear()   # "UNFINISHED"
+            bad_moves.clear()
+            return False
   
         
     def print_board(self):
         "Visualization of gameboard"
-        for i in self._board:
-            print(i)
+        print(*self._board, sep='\n')
 
 
